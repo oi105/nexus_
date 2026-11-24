@@ -1,0 +1,760 @@
+NEXUS UPDATE — REPLACE REDDIT VOTING WITH COMMUNITY LIKE SYSTEM
+Make a focused update to the existing NEXUS application.
+Do not redesign the entire application or modify unrelated functionality.
+1. Remove the old voting system
+Completely remove:
+Upvote arrows.
+Downvote arrows.
+Upvote scores.
+Downvote scores.
+Net vote calculations.
+Separate "people with same doubt" counters.
+Do not leave any remnants of Reddit-style voting anywhere in the application.
+2. Introduce the NEXUS Like system
+Every doubt must have one Like interaction represented by a clean heart icon.
+The meaning of liking a doubt is explicitly:
+"I have this doubt too."
+This is NOT a generic appreciation or popularity button.
+When a student likes a doubt, they are confirming that they personally have the same question or struggle with the same problem.
+Display:
+Heart icon.
+Total number of students who liked the doubt.
+A small contextual label: "students have this doubt".
+An interactive action labelled "I have this doubt too".
+When the current user has liked the question:
+Fill the heart with the primary coral accent.
+Show a subtle active state.
+Change the action label to "You have this doubt too".
+Allow the user to remove their like.
+Use a tasteful animation when liking or unliking.
+3. Strict voting rules
+One like per user per doubt.
+A user cannot like the same doubt multiple times.
+Clicking an already-active like removes it.
+Anonymous Firebase users may like doubts.
+Google-authenticated users may like doubts.
+Guest identity must be retained when linked to a Google account where supported.
+Do not count duplicate likes.
+Do not allow a user to manipulate the like count through repeated requests.
+If Firebase is already connected, implement the interaction using Firestore and appropriate security rules.
+Do not rely exclusively on client-side state or local storage for permanent like records.
+Use a separate like record associated with the question and user identity, and maintain an accurate count.
+Use atomic transactions or another race-safe approach to prevent duplicate likes and inconsistent counts.
+4. Feed ranking
+Change the default feed sorting from Trending based on Reddit-style votes to MOST LIKED.
+The default feed must rank questions by their total like count in descending order.
+Questions with more likes appear first.
+When two questions have the same like count, prefer the newer question.
+Keep these additional filters:
+Newest.
+Unanswered.
+Do not show a separate "same doubt count" because the Like count already represents exactly that information.
+5. Update every screen consistently
+Apply the change to:
+Main feed.
+Question cards.
+Question detail page.
+My Activity.
+Profile contributions.
+Any other screen displaying vote information.
+Update all corresponding interface labels.
+Remove old upvote/downvote terminology from the entire application.
+6. Visual design
+Use the current NEXUS light Electric Editorial design system.
+Use a refined heart icon, preferably Lucide.
+The default heart should be subtle and the active state should use the coral accent.
+Keep the like count compact and readable.
+Do not introduce an oversized Like button or another large card.
+Keep it integrated naturally into the question card's interaction row.
+7. Preserve everything else
+Do not change:
+Existing NEXUS branding.
+Colour palette.
+Navigation.
+Question composition.
+AI insight functionality.
+Firebase authentication.
+Answer system.
+Session functionality.
+Admin functionality.
+Existing database records except where migration is required.
+Inspect the existing implementation before making changes.
+If an old voting data structure exists, do not silently delete existing question records. Implement a safe migration or compatibility strategy.
+Finally, test liking, unliking, duplicate prevention, persistent counts and Most Liked ordering.
+Only modify the functionality and interface related to voting and feed ranking.
+NEXUS FEATURE UPDATE — RICH MEDIA ATTACHMENTS IN QUESTIONS AND ANSWERS
+Implement a complete Reddit-style rich attachment system throughout NEXUS.
+This is a focused feature addition. Do not redesign the application or modify unrelated functionality.
+1. Both composers must support attachments
+Add the same reusable attachment component to:
+A. Ask Doubt composer.
+B. Answer / Resolve Doubt composer.
+Both must support:
+Image uploads.
+Document uploads.
+YouTube URLs.
+External website URLs.
+Users should be able to combine text and multiple attachments in the same post.
+2. Image attachments
+Support:
+JPG
+JPEG
+PNG
+WEBP
+Requirements:
+Upload images through the existing configured Cloudinary integration.
+Display image previews before publishing.
+Support multiple images.
+Allow removing individual attachments.
+Display uploaded images inline within the published question or answer.
+Provide an image viewer/lightbox when clicked.
+Preserve aspect ratios and avoid stretching.
+Make images responsive.
+3. Document attachments
+Support:
+PDF
+DOC
+DOCX
+PPT
+PPTX
+TXT
+Requirements:
+Display file name, format and file size.
+Use a clean file attachment card.
+Provide preview for supported formats, especially PDFs.
+Provide an appropriate open/download action.
+Permit removing the attachment before publishing.
+Reject unsupported file types and files exceeding configurable size limits.
+4. YouTube integration
+Allow users to paste:
+youtube.com/watch URLs.
+youtu.be URLs.
+YouTube Shorts URLs.
+Automatically recognise valid YouTube links.
+Display an attractive video preview with:
+Thumbnail.
+Video title when available.
+YouTube branding.
+Play interaction.
+Embed valid videos using an appropriate privacy-enhanced YouTube embed URL.
+Do not autoplay videos.
+Validate URLs and allow only legitimate YouTube domains.
+A YouTube link must remain usable even when its thumbnail or metadata cannot be retrieved.
+Do not require a YouTube API key simply to embed a valid video.
+5. External links
+Allow users to attach external URLs.
+Display a compact link preview where possible:
+Website title.
+Domain.
+Description when safely available.
+Relevant thumbnail when safely available.
+If metadata cannot be retrieved, show a simple clickable link card.
+Validate URL formats and prevent unsafe schemes such as javascript: or data:.
+Never embed arbitrary external URLs as unsanitised iframes.
+6. Published content rendering
+Update both question detail and answer rendering components.
+Render:
+Images inline.
+YouTube videos as embedded responsive players.
+PDFs and documents as file cards.
+External URLs as link preview cards.
+Keep the content visually integrated with the existing NEXUS Electric Editorial light theme.
+Do not make attachments enormous by default.
+Provide sensible spacing and responsive layouts.
+Multiple media types must render in the order selected or attached.
+7. Upload security and storage
+Use the existing Cloudinary service architecture if already configured.
+If Cloudinary is not yet connected, prepare the service interface and show an honest configuration error rather than pretending an upload succeeded.
+Do not upload files directly using exposed privileged API credentials.
+Use secure server-generated signed upload parameters where required.
+Enforce:
+Allowed file formats.
+Maximum file sizes.
+Authenticated upload identity, including supported Firebase anonymous identities for guest answers.
+Server-side validation.
+Ownership checks.
+Safe file URLs.
+Proper cleanup of abandoned uploads where feasible.
+Store attachment metadata in Firestore, not the raw binary file.
+The metadata should include:
+Attachment ID.
+Type.
+File name.
+Secure URL.
+Cloudinary public ID where relevant.
+MIME type.
+File size.
+Uploaded-by user ID.
+Creation timestamp.
+Questions and answers should each maintain their own attachments array or appropriate subcollection.
+8. AI integration compatibility
+Where the question author enables NEXUS AI analysis, make the attachment metadata available to the AI processing pipeline.
+For image questions, support image understanding when the configured Gemini model supports it.
+Never silently claim that AI has analysed a document or image if it has only received its URL or filename.
+Clearly distinguish successfully analysed material from unsupported attachment types.
+AI should not automatically access private external URLs.
+9. Responsive and visual requirements
+Use the existing light NEXUS design system.
+Attachment controls should be compact and elegant.
+Use Lucide icons:
+image
+file-up
+youtube
+link
+x
+eye
+download
+Provide:
+Upload progress.
+Upload success.
+Upload failure.
+File size warnings.
+Retry actions.
+Preview.
+Remove attachment.
+Ensure the attachment section does not overwhelm the writing area.
+10. Preserve everything else
+Do not change:
+NEXUS branding.
+Navigation.
+Feed ranking.
+Like system.
+Firebase authentication.
+Skill matching.
+Gemini integration except the specified attachment compatibility.
+Sessions.
+Admin panel.
+Existing database records.
+Use reusable attachment components in both question and answer composers rather than implementing two unrelated systems.
+Finally, test image upload, document upload, YouTube preview, external links, answer attachments, question attachments, editing/removing attachments and persistence after refresh.
+Never use fake upload completion states.
+NEXUS UI UPDATE — INSTAGRAM-STYLE DISCUSSION PANEL
+Implement an Instagram-inspired comments and discussion experience in the existing NEXUS application.
+The main requirement is that clicking Answer, the answer count, or View Discussion must NOT navigate the user to a separate question detail page.
+Instead, open an elegant discussion panel over the existing feed.
+1. Desktop behaviour
+Create a right-side sliding discussion drawer.
+Requirements:
+Slide in smoothly from the right.
+Keep the current feed visible behind it.
+Use a subtle background overlay.
+Use a clean white surface consistent with NEXUS Electric Editorial styling.
+Use a fixed, compact header.
+Include a close button.
+Allow the discussion content to scroll independently.
+Keep the answer composer fixed at the bottom.
+The drawer should feel like Instagram's desktop comment panel, not a traditional full-page discussion screen.
+2. Mobile behaviour
+On mobile, use an Instagram-style bottom sheet.
+Requirements:
+Open from the bottom.
+Include a small drag handle.
+Rounded upper corners.
+Expand to approximately 90–95% of screen height.
+Allow scrolling through answers.
+Keep the answer composer fixed at the bottom.
+Include an obvious close interaction.
+Prevent background scrolling while the sheet is open.
+On smaller screens, it may expand to full screen for better usability.
+3. Discussion panel content
+At the top show:
+Original question author.
+Question title.
+Short question description.
+Category and skill tags.
+Attachment previews.
+Like count.
+Below it, show:
+Community answers.
+Answer author.
+Time posted.
+Rich text content.
+Image attachments.
+Document attachments.
+YouTube embeds.
+External link previews.
+Use compact, readable answer layouts.
+Do not make each answer an oversized card.
+4. Answer composer
+Keep the answer composer fixed at the bottom of the panel.
+Support:
+Text answers.
+Image attachments.
+PDF and document attachments.
+YouTube links.
+External URLs.
+Reuse the existing NEXUS Rich Attachment component.
+Allow image and file previews before submission.
+The composer must support guest users through their anonymous Firebase identity and authenticated users through their existing account.
+After submitting:
+Save the answer to the existing Firestore structure.
+Close or clear the composer appropriately.
+Immediately display the new answer.
+Update the answer count on the corresponding feed card.
+Preserve all attachments.
+Show an honest error state if submission fails.
+5. Answer interactions
+Support:
+Like an answer where the existing data model permits.
+Reply to an answer using a compact inline reply interaction.
+Display reply counts.
+Show newest and most helpful sorting if already supported.
+Do not introduce a complicated nested discussion system unnecessarily.
+6. Feed integration
+Every question card must open the discussion panel when the user clicks:
+Answer.
+Answer count.
+View Discussion.
+Do not navigate away from the feed for these actions.
+Preserve the current scroll position and feed state when closing the panel.
+Opening another question should load its own discussion in the same panel.
+Use actual question and answer IDs, not hardcoded demo content.
+7. Navigation and state
+Use a reusable discussion drawer/bottom-sheet component.
+Manage the selected question and panel visibility cleanly.
+Avoid full-page reloads.
+If the user closes the panel, return to precisely the same feed position.
+The panel should support keyboard Escape to close on desktop and proper focus management.
+Do not leave background elements interactable when the modal is open.
+8. Visual design
+Preserve the existing NEXUS Electric Editorial light theme.
+Use:
+White panel surface.
+Deep charcoal typography.
+Electric blue interaction accents.
+Coral for active likes.
+Thin separators.
+Subtle shadows.
+Refined motion.
+Avoid excessive borders, giant cards and unnecessary decorative elements.
+9. Preserve existing functionality
+Do not redesign the homepage.
+Do not modify:
+NEXUS branding.
+Feed layout.
+Like system.
+Most-liked ranking.
+Firebase authentication.
+Firestore data.
+AI insight generation.
+Rich attachments.
+Sessions.
+Admin panel.
+Inspect existing components and reuse the answer and attachment components wherever possible.
+Finally, test:
+Open a discussion from a feed card.
+Close the panel.
+Open another question.
+Post a text answer.
+Post an answer with an image or document.
+Verify answer counts update.
+Verify feed scroll position is preserved.
+Verify desktop and mobile behaviour.
+Implement this as a working interaction, not a static visual mockup.
+Gemini 4 Hydrogen
+Ran for 15m 58s
+
+Action history
+Here are key actions taken for the app:
+
+Edited 19 files
+firebase-blueprint.json
+firestore.rules
+.env.example
+server.ts
+src/types/nexus.ts
+src/utils/nexusLogic.ts
+src/utils/nexusLogic.test.ts
+src/data/demoData.ts
+src/services/nexusService.ts
+src/components/RichAttachments.tsx
+src/components/DiscussionDrawer.tsx
+src/components/QuestionCard.tsx
+src/components/DiscoverFeed.tsx
+src/components/AskDoubtModal.tsx
+src/components/NexusAiPanel.tsx
+src/components/ActivityView.tsx
+src/components/ProfileView.tsx
+src/App.tsx
+src/components/QuestionDetail.tsx
+Built
+Used browser, took 3 screenshots
+
+
+
+NEXUS has been updated with the Community Like System, unified Rich Media Attachments, and the Instagram-style Discussion Drawer while preserving the Electric Editorial design system, Firebase authentication, 15-minute sessions, and admin moderation.
+Summary of Changes
+NEXUS Community Like System & Feed Ranking
+Removed all Reddit-style upvote/downvote controls, scores, and separate "same doubt" counters across the feed, cards, drawer, activity, profile, and Firestore schema/rules.
+Added a single Heart-based interaction explicitly labelled "I have this doubt too" ("students have this doubt") that toggles to a coral-filled heart ("You have this doubt too") with subtle spring animation.
+Enforced strict 1-like-per-user-per-doubt via Firestore transactions (questions/{questionId}/likes/{userId}) for both Google-authenticated and anonymous guest users, with safe backward-compatible fallback mapping for legacy question fields (resolveLegacyLikeCount).
+Updated default feed ranking to Most Liked (likeCount descending, tie-breaking on newer createdAtMs), alongside Newest and Unanswered.
+Rich Media Attachments (Questions & Answers)
+Built a reusable attachment module exporting AttachmentComposer and AttachmentRenderer, shared by both the Ask a Doubt modal and the Answer Composer.
+Images (JPG, JPEG, PNG, WEBP) & Documents (PDF, DOC, DOCX, PPT, PPTX, TXT): validated up to 10 MB and uploaded via Cloudinary (/api/uploads/cloudinary-sign supporting signed or unsigned uploads, reporting an honest error when CLOUDINARY_* credentials are not configured). Images include an interactive Lightbox viewer; PDFs support modal preview alongside download/open actions.
+YouTube Integration: validates youtube.com/watch, youtu.be/, and youtube.com/shorts/ URLs, renders thumbnail + title cards, and switches on click to privacy-enhanced youtube-nocookie.com embeds (no autoplay).
+External URLs: validates http:// / https:// links only, fetches safe server-side preview metadata via /api/links/preview with graceful fallback, and never embeds arbitrary external pages as iframes.
+AI Attachment Inspection: updated /api/nexus-ai/insight and NexusAiPanel to pass eligible public HTTPS image attachments as inlineData to Gemini while explicitly disclosing which attachments (e.g., PDFs, documents, external links) were not parsed.
+Instagram-Style Discussion Panel
+Replaced full-page navigation with DiscussionDrawer: a right-side sliding drawer on desktop and a bottom sheet (92dvh, drag handle) on mobile (< 768px) that locks background scroll, preserves feed scroll position, and closes via Escape, backdrop click, or the close button.
+Displays question context, attachments, NEXUS Like button, 15-minute session booking, Report, expandable NEXUS AI insights, sorted community answers (Most helpful / Newest) with answer Likes (answers/{answerId}/likes/{userId}), compact inline Replies (answers/{answerId}/replies/{replyId}), and a fixed bottom Answer Composer.
+Verification
+Firestore Security Rules: npx eslint firestore.rules passed with 0 errors and updated rules were deployed via DeployRules.
+Unit Tests: npx --yes tsx --test src/utils/nexusLogic.test.ts passed all 8/8 tests (like toggle transitions, legacy count migration, Most Liked/Newest/Unanswered sorting, answer sorting, YouTube URL parsing, safe URL checks, and attachment file validation).
+Build & Type Check: compile_applet and lint_applet (tsc --noEmit) succeeded with 0 errors.
+Browser Verification (playwright-cli): Verified desktop (1440x900) and mobile (390x844) layouts, Like toggle counts, Most Liked / Newest / Unanswered tabs, Discussion Drawer opening/closing with feed scroll preservation, YouTube attachment + answer submission + inline reply, Ask Doubt composer parity, zero mobile horizontal overflow, and 0 browser console errors.
+Checkpoint
+now also add admin panel so that i can access the report of the doubts and access everything as a admin and can message . and anyone publishing doubt must shown in discobery dashboard like its showing this while publising doubt
+NEXUS PRODUCT UPDATE — CAMERA CAPTURE, AI REWARDS AND TOP SOLVERS LEADERBOARD
+Act as a senior full-stack engineer, AI product architect and UX designer.
+Implement the following product changes in the existing NEXUS project.
+This is a functionality update, not a complete redesign.
+Preserve the existing NEXUS Electric Editorial light design, branding, typography, components and working features.
+Inspect the existing project before modifying it.
+Do not replace functional code with mock implementations.
+==================================================
+REMOVE THE 15-MINUTE SESSION SYSTEM
+==================================================
+We have decided that strangers should not be expected to schedule 15-minute meetings.
+Remove the session-booking concept completely.
+Remove:
+Sessions navigation item.
+Session booking buttons.
+15-minute session cards.
+Session countdowns.
+Session scheduling forms.
+Session statistics.
+Video calling interface.
+100ms SDK dependencies and integration code if already added.
+Session-related promotional content.
+Right-sidebar session widgets.
+Do not add another meeting or scheduling feature as a replacement.
+Preserve the doubt answering and resolution system.
+If historical session records already exist, do not destructively delete them from Firestore. Stop generating new session records and remove their regular user-facing navigation.
+The main purpose of NEXUS is asynchronous community problem-solving through rich questions and answers.
+==================================================
+2. ADD LIVE CAMERA CAPTURE TO ASK DOUBT
+This is an important new feature.
+Add a prominent camera capture action inside the Ask Doubt composer.
+Label:
+"Capture a photo"
+Purpose:
+Students should be able to photograph a physical problem, written question, textbook page, circuit, CAD drawing, screen error or handwritten notes and immediately attach it to a doubt.
+Use the browser's native MediaDevices.getUserMedia() API.
+Do not integrate Google Assistant itself.
+Do not build a fake camera screen.
+CAMERA EXPERIENCE:
+User clicks Capture a photo.
+Ask for browser camera permission.
+Open the camera preview inside a compact, polished capture modal.
+Prefer the rear/environment-facing camera on mobile.
+Use the default available camera on desktop.
+Show a clear capture button.
+Capture a still image.
+Display the captured image preview.
+Allow Retake, Remove and Use Photo actions.
+Attach the captured image to the current doubt draft.
+Permit multiple images where reasonable.
+Allow the user to add a written description before publishing.
+CAMERA CONTROLS:
+Capture.
+Retake.
+Switch camera when supported.
+Cancel.
+Use photo.
+TECHNICAL REQUIREMENTS:
+Use getUserMedia with video only. Do not request microphone access.
+Use facingMode: environment as the preferred mobile camera.
+Provide a suitable fallback if the requested camera is unavailable.
+Stop every active MediaStream track when the camera modal closes, when the capture finishes or when the component unmounts.
+Never keep the camera running in the background.
+Do not silently activate the camera.
+Respect browser permission decisions.
+Handle denied permission, unavailable camera and hardware errors gracefully.
+Display a useful fallback to standard image upload.
+Support HTTPS deployment and local development on localhost.
+Privacy:
+Never capture automatically.
+Never upload before the user confirms and publishes the doubt.
+Let the user preview and remove the image.
+Do not store raw camera streams.
+Do not request audio.
+Use the existing Cloudinary upload service to upload confirmed photographs securely.
+If Cloudinary is not connected, show an honest configuration error rather than a fake upload-success message.
+The camera feature must work on mobile and desktop wherever supported.
+==================================================
+3. REMOVE USER-SELECTED BOUNTY CREDITS
+Completely remove the manual bounty input from the Ask Doubt form.
+Students must not choose how many credits their doubt is worth.
+Do not let question authors:
+Enter credit amounts.
+Change assigned credit levels.
+Purchase credits.
+Increase their own bounty.
+Manipulate difficulty to obtain higher rewards.
+Every newly published doubt must be automatically assessed by NEXUS AI.
+==================================================
+4. BUILD THE NEXUS AI REWARD ENGINE
+When a student publishes a doubt, evaluate its difficulty using the server-side Gemini integration.
+The AI should analyse:
+Question title.
+Description.
+Selected subject and category.
+Relevant skill tags.
+Attached images where supported.
+Relevant document content where safely supported.
+Technical complexity.
+Required knowledge.
+Number of reasoning steps.
+Expected problem-solving effort.
+Do not assign higher credits merely because the question has a longer description or more attachments.
+The AI must return structured JSON containing:
+difficultyTier.
+difficultyReason.
+estimatedComplexity.
+relevantSkillTags.
+Do not allow the AI model to freely invent numerical credit values.
+Use this fixed reward mapping:
+QUICK_FIX = 5 credits.
+STANDARD = 10 credits.
+CHALLENGING = 20 credits.
+ADVANCED = 30 credits.
+The backend must validate the difficulty tier and calculate the actual credit amount using this fixed mapping.
+The client must never be allowed to submit or modify its own credit reward.
+Display the assigned difficulty and reward on the question card:
+Example:
+"AI estimated · Challenging · 20 credits"
+Use a small, elegant metadata element.
+Do not create a giant reward banner.
+After question publication:
+Store the AI difficulty tier.
+Store the AI difficulty explanation.
+Store the automatically assigned credit amount.
+Store the assessment timestamp.
+Store the AI assessment status.
+The assigned reward should remain fixed for the lifetime of that doubt, except for an authorized administrator correction.
+If Gemini classification fails:
+Do not fabricate a difficulty or reward.
+Save the doubt with assessmentStatus = pending.
+Display a small assessment-pending status.
+Retry assessment through a controlled server-side mechanism.
+Allow normal question browsing and answering while assessment is pending.
+AI classification must be performed server-side with secure API key handling.
+==================================================
+5. CREDIT AWARDING RULES
+Credits are rewards for successfully solving doubts.
+They are not rewards for posting questions, receiving likes or writing arbitrary answers.
+The process:
+A student publishes a doubt.
+NEXUS AI assigns a difficulty tier and reward.
+Another student provides an answer.
+The requester reviews the answers.
+The requester selects a helpful answer and chooses Mark as Solved.
+The system records the accepted answer.
+The answer author receives the assigned credits.
+Both question status and credit records update.
+Only the authorized doubt owner may confirm a solution.
+Prevent:
+Self-awarded credits.
+Duplicate credit awards.
+Duplicate resolution transactions.
+Multiple payouts for the same doubt.
+Credit manipulation from the frontend.
+Users changing an awarded amount.
+Awards for merely posting an answer without accepted resolution.
+Use a server-side transaction or trusted backend operation.
+Create an auditable credit transaction record with:
+Transaction ID.
+User ID receiving the credits.
+Related doubt ID.
+Accepted answer ID.
+Credits awarded.
+Difficulty tier.
+Timestamp.
+Transaction type.
+Make the award atomic and idempotent.
+A reward must be issued only once per resolved question.
+Use Firestore transactions or an equivalent trusted server-side atomic mechanism.
+Firebase Security Rules must prevent normal clients from writing their own credit balances or creating unauthorized award transactions.
+==================================================
+6. REPLACE TRENDING TOPICS WITH TOP SOLVERS
+Remove the Trending Topics widget entirely.
+Do not replace it with another list of random trending categories.
+Instead, add a refined Top Solvers leaderboard.
+Place it in the right-hand contextual sidebar of the Discover page.
+The leaderboard should recognize students who have successfully solved other people's doubts.
+Show:
+Rank.
+Avatar.
+Display name.
+Total earned credits.
+Number of successfully resolved doubts.
+Add two compact views:
+All Time.
+This Month.
+Default to All Time.
+Sort by:
+Total successfully earned credits, descending.
+Number of resolved doubts, descending, for ties.
+Earlier achievement timestamp as a final tie-breaker.
+Do not include:
+Credits from asking doubts.
+Credits from question likes.
+Credits from unaccepted answers.
+Manually entered points.
+Every leaderboard value must be derived from verified reward transactions.
+Do not display fake leaderboard statistics as live information.
+Use actual Firestore data.
+If there are not enough users, show a good empty state and clearly identified sample data only in demo mode.
+==================================================
+7. PROFILE UPDATE
+Add solver achievements to the student profile.
+Display:
+Total credits earned.
+Total doubts successfully solved.
+Accepted answers.
+Contribution history.
+Current leaderboard position where available.
+Do not exaggerate reputation using unverified activities.
+Use the verified credit transaction records as the source of truth.
+==================================================
+8. ADMIN CONTROL CENTRE UPDATE
+Add an AI reward monitoring section to the existing protected admin panel.
+Allow authorized administrators to inspect:
+Automatically assigned difficulty.
+Assigned credit amount.
+Classification explanation.
+Assessment status.
+Completed reward transactions.
+Reported reward classification issues.
+Administrators may correct an incorrect difficulty only through an explicitly logged adjustment.
+Log:
+Previous tier.
+New tier.
+Previous reward.
+New reward.
+Admin user ID.
+Reason.
+Timestamp.
+Never allow normal users to access administrator reward controls.
+==================================================
+9. UPDATE THE MAIN DISCOVER FEED
+Preserve the existing most-liked sorting system.
+Keep:
+Most Liked.
+Newest.
+Unanswered.
+Do not reintroduce Reddit upvote or downvote functionality.
+Keep the existing Like = "I have this doubt too" interaction.
+Display the automatically assigned bounty in a compact format.
+Remove every reference to 15-minute sessions and trending topics.
+The replacement contextual sidebar should show Top Solvers, not Trending Topics.
+==================================================
+10. DATA ARCHITECTURE
+Inspect the current Firestore schema.
+Reuse and extend existing collections instead of creating unnecessary duplicate collections.
+Suggested logical data:
+DOUBTS:
+id
+authorId
+title
+description
+category
+tags
+attachments
+likeCount
+answerCount
+status
+difficultyTier
+difficultyReason
+assignedCredits
+assessmentStatus
+assessmentTimestamp
+createdAt
+resolvedAt
+acceptedAnswerId
+CREDIT TRANSACTIONS:
+id
+userId
+doubtId
+acceptedAnswerId
+credits
+difficultyTier
+transactionType
+createdAt
+USER PROFILE:
+existing profile fields
+totalCreditsEarned
+totalDoubtsSolved
+updatedAt
+Avoid storing duplicated and inconsistent values across documents unnecessarily.
+Use transactions and trusted server-side validation when updating rewards and profile aggregates.
+==================================================
+11. UI AND QUALITY REQUIREMENTS
+Maintain the existing NEXUS Electric Editorial theme.
+Use:
+Warm light background.
+White surfaces.
+Electric blue primary actions.
+Coral active Like.
+Violet NEXUS AI.
+Refined camera iconography.
+Compact reward badges.
+Clean leaderboard rows.
+The camera interface should feel intuitive and polished, not like a developer testing utility.
+The leaderboard should feel like a genuine community achievement system, not an oversized gaming dashboard.
+Do not use emoji icons.
+==================================================
+12. FINAL TESTING
+Test the complete workflow:
+A. Camera:
+Open camera.
+Grant permission.
+Capture photograph.
+Retake.
+Remove.
+Attach and publish.
+Verify uploaded image persists.
+Deny camera permission and test fallback.
+B. AI assessment:
+Publish a simple doubt.
+Publish a moderate technical doubt.
+Publish a complex technical doubt.
+Verify appropriate difficulty classifications and mapped credits.
+Test Gemini failure and retry.
+C. Reward system:
+Submit an answer.
+Accept the answer as the doubt owner.
+Confirm that the correct helper receives credits.
+Try duplicate resolution.
+Confirm no duplicate reward.
+Verify unauthorized users cannot change credit records.
+D. Leaderboard:
+Verify All Time ranking.
+Verify This Month ranking.
+Verify totals match the credit transactions.
+Refresh and verify persistence.
+E. Regression:
+Test guest browsing.
+Test anonymous answers.
+Test Google authentication.
+Test Like functionality.
+Test rich attachments.
+Test Instagram-style discussion panel.
+Test admin permissions.
+Verify no session-booking interface remains.
+Do not claim a feature works unless it has actually been implemented and tested.
+Preserve all unrelated working NEXUS functionality.
+Complete this update with clean, modular and maintainable code.and fix erors
+WhatsApp Image 2026-11-23 at 10.52.27 PM.jpeg
+WhatsApp Image 2026-11-23 at 10.52.27 PM.jpeg
+Gemini 4 Hydrogen
+Ran for 11m 15s
+
+Action history
+Here are key actions taken for the app:
+
+Edited 22 files
+firebase-blueprint.json
+metadata.json
+security_spec.md

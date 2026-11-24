@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-canvas: #F5F5F0;
+  --color-surface: #FFFFFF;
+  --color-ink: #172033;
+  --color-muted: #687386;
+  --color-cobalt: #365BEE;
+  --color-coral: #FF694F;
+  --color-lime: #C8ED62;
+  --color-ai-violet: #8676E8;
+  --color-hairline: #DFE5F0;
+}
+
+@layer base {
+  :root {
+    --nx-canvas: #F4F5F8;
+    --nx-surface: #FFFFFF;
+    --nx-surface-alt: #EAECEF;
+    --nx-ink: #090B10;
+    --nx-muted: #3F4A5F;
+    --nx-border: #CBD5E1;
+    --nx-accent: #DC2626;
+    --nx-accent-hover: #B91C1C;
+  }
+
+  .dark {
+    --nx-canvas: #050609;
+    --nx-surface: #0B0D14;
+    --nx-surface-alt: #131620;
+    --nx-ink: #F8FAFC;
+    --nx-muted: #A3AFC8;
+    --nx-border: rgba(255, 255, 255, 0.16);
+    --nx-accent: #EF233C;
+    --nx-accent-hover: #DC2626;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--nx-canvas);
+    color: var(--nx-ink);
+    font-size: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .dark body {
+    background-color: var(--nx-canvas);
+    color: var(--nx-ink);
+  }
+
+  /* High-contrast Light Mode strokes & ink readability */
+  :root:not(.dark) .text-\[\#172033\] {
+    color: #090B10;
+  }
+
+  :root:not(.dark) .text-\[\#687386\] {
+    color: #3F4A5F;
+  }
+
+  :root:not(.dark) .border-\[\#DFE5F0\] {
+    border-color: #BCC6D8;
+  }
+
+  /* Clean surface & contrast mapping for Dark Mode (Obsidian Black + Crimson Red + Crisp White) */
+  .dark .bg-white,
+  .dark .bg-white\/95 {
+    background-color: var(--nx-surface) !important;
+    color: var(--nx-ink);
+  }
+
+  .dark .bg-\[\#F5F5F0\],
+  .dark .bg-\[\#F5F5F0\]\/80,
+  .dark .bg-\[\#F5F5F0\]\/70,
+  .dark .bg-\[\#F5F5F0\]\/50,
+  .dark .bg-\[\#F8FAFC\] {
+    background-color: var(--nx-surface-alt) !important;
+  }
+
+  .dark .border-\[\#DFE5F0\],
+  .dark .border-\[\#CBD5E1\],
+  .dark .border-gray-200,
+  .dark .border-gray-100 {
+    border-color: var(--nx-border) !important;
+  }
+
+  .dark .divide-\[\#DFE5F0\] > :not(:last-child),
+  .dark .divide-\[\#CBD5E1\] > :not(:last-child) {
+    border-color: var(--nx-border) !important;
+  }
+
+  .dark .text-\[\#172033\],
+  .dark .text-\[\#090B10\] {
+    color: var(--nx-ink) !important;
+  }
+
+  .dark .text-\[\#687386\],
+  .dark .text-\[\#3F4A5F\] {
+    color: var(--nx-muted) !important;
+  }
+
+  /* Keep emerald / lime / green badges crisp and legible in Dark Mode */
+  .dark .text-\[\#224414\],
+  .dark .text-\[\#2D6218\] {
+    color: #A7F3D0 !important;
+  }
+
+  .dark .text-\[\#3F7F24\] {
+    color: #34D399 !important;
+  }
+
+  .dark .bg-\[\#C8ED62\] {
+    background-color: #10B981 !important;
+    color: #08120E !important;
+  }
+
+  .dark .text-\[\#C4422C\] {
+    color: #FCA5A5 !important;
+  }
+
+  .dark .text-\[\#365BEE\] {
+    color: #F87171 !important;
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: #11141D;
+    color: var(--nx-ink);
+    border-color: var(--nx-border);
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #6B768B;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+  }
+
+  h1 {
+    font-weight: 800;
+  }
+
+  h2 {
+    font-weight: 700;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DFE5F0;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #2C3448;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #687386;
+}

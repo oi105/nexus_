@@ -1,0 +1,282 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public student profile visible to the NEXUS community (no PII).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "branch": { "type": "string", "maxLength": 60 },
+        "year": { "type": "string", "maxLength": 30 },
+        "bio": { "type": "string", "maxLength": 300 },
+        "skills": { "type": "array", "description": "Up to 12 student skills" },
+        "reputation": { "type": "number" },
+        "sessionsCompleted": { "type": "number" },
+        "contributions": { "type": "number" },
+        "creditsEarned": { "type": "number" },
+        "totalCreditsEarned": { "type": "number" },
+        "totalDoubtsSolved": { "type": "number" },
+        "lastRewardDoubtId": { "type": "string", "maxLength": 128 },
+        "availableToHelp": { "type": "boolean" },
+        "isSuspended": { "type": "boolean" },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "reputation", "contributions", "creditsEarned", "availableToHelp", "isSuspended", "isPublic", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII document for user email and private preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 160 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "updatedAt"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Community learning doubt posted by an authenticated student with AI-assessed difficulty & credits.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "authorPhotoURL": { "type": "string", "maxLength": 500 },
+        "authorBranch": { "type": "string", "maxLength": 60 },
+        "title": { "type": "string", "minLength": 5, "maxLength": 180 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 5000 },
+        "topic": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "tags": { "type": "array", "description": "Up to 8 skill tags" },
+        "urgency": { "type": "string", "enum": ["normal", "urgent", "critical"] },
+        "status": { "type": "string", "enum": ["open", "claimed", "in_session", "resolved"] },
+        "bountyCredits": { "type": "number", "description": "Legacy compatibility mirror of assignedCredits" },
+        "difficultyTier": { "type": "string", "enum": ["QUICK_FIX", "STANDARD", "CHALLENGING", "ADVANCED"] },
+        "difficultyReason": { "type": "string", "maxLength": 500 },
+        "estimatedComplexity": { "type": "string", "maxLength": 120 },
+        "assignedCredits": { "type": "number" },
+        "assessmentStatus": { "type": "string", "enum": ["pending", "completed", "failed"] },
+        "assessmentTimestamp": { "type": "string", "format": "date-time" },
+        "acceptedAnswerId": { "type": "string", "maxLength": 128 },
+        "resolvedAt": { "type": "string", "format": "date-time" },
+        "attachments": { "type": "array", "description": "Up to 6 rich media attachment metadata records" },
+        "likeCount": { "type": "number", "description": "Number of students who have this doubt too" },
+        "answerCount": { "type": "number" },
+        "hasAiInsight": { "type": "boolean" },
+        "isPublic": { "type": "boolean" },
+        "moderationStatus": { "type": "string", "enum": ["active", "flagged", "removed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "authorId", "authorName", "title", "description", "topic", "tags", "urgency", "status", "assignedCredits", "assessmentStatus", "likeCount", "answerCount", "hasAiInsight", "isPublic", "moderationStatus", "createdAt", "updatedAt"]
+    },
+    "QuestionLike": {
+      "title": "QuestionLike",
+      "description": "Single NEXUS Like ('I have this doubt too') record per user identity per question.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "createdAt"]
+    },
+    "Answer": {
+      "title": "Answer",
+      "description": "Community answer on a question with optional rich media attachments.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "questionId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "authorPhotoURL": { "type": "string", "maxLength": 500 },
+        "authorIsGuest": { "type": "boolean" },
+        "authorBranch": { "type": "string", "maxLength": 60 },
+        "body": { "type": "string", "minLength": 1, "maxLength": 5000 },
+        "attachments": { "type": "array", "description": "Up to 6 rich media attachment metadata records" },
+        "likeCount": { "type": "number" },
+        "replyCount": { "type": "number" },
+        "isAccepted": { "type": "boolean" },
+        "isPublic": { "type": "boolean" },
+        "moderationStatus": { "type": "string", "enum": ["active", "flagged", "removed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "questionId", "authorId", "authorName", "authorIsGuest", "body", "likeCount", "replyCount", "isAccepted", "isPublic", "moderationStatus", "createdAt", "updatedAt"]
+    },
+    "AnswerLike": {
+      "title": "AnswerLike",
+      "description": "Single like record per user identity per answer.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "createdAt"]
+    },
+    "AnswerReply": {
+      "title": "AnswerReply",
+      "description": "Compact inline reply to a community answer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "questionId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "answerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "authorPhotoURL": { "type": "string", "maxLength": 500 },
+        "authorIsGuest": { "type": "boolean" },
+        "body": { "type": "string", "minLength": 2, "maxLength": 1500 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "questionId", "answerId", "authorId", "authorName", "authorIsGuest", "body", "isPublic", "createdAt"]
+    },
+    "CreditTransaction": {
+      "title": "CreditTransaction",
+      "description": "Immutable, idempotent credit award record issued once per resolved doubt.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "userPhotoURL": { "type": "string", "maxLength": 500 },
+        "doubtId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "doubtTitle": { "type": "string", "minLength": 3, "maxLength": 180 },
+        "acceptedAnswerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "credits": { "type": "number" },
+        "difficultyTier": { "type": "string", "enum": ["QUICK_FIX", "STANDARD", "CHALLENGING", "ADVANCED"] },
+        "transactionType": { "type": "string", "enum": ["DOUBT_SOLVED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "userName", "doubtId", "doubtTitle", "acceptedAnswerId", "credits", "difficultyTier", "transactionType", "createdAt"]
+    },
+    "RewardAdjustment": {
+      "title": "RewardAdjustment",
+      "description": "Auditable admin log for difficulty & credit reward overrides.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "doubtId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "doubtTitle": { "type": "string", "maxLength": 180 },
+        "previousTier": { "type": "string", "maxLength": 30 },
+        "newTier": { "type": "string", "enum": ["QUICK_FIX", "STANDARD", "CHALLENGING", "ADVANCED"] },
+        "previousCredits": { "type": "number" },
+        "newCredits": { "type": "number" },
+        "adminUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "adminName": { "type": "string", "maxLength": 80 },
+        "reason": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "doubtId", "previousTier", "newTier", "previousCredits", "newCredits", "adminUserId", "reason", "createdAt"]
+    },
+    "AdminMessage": {
+      "title": "AdminMessage",
+      "description": "Direct message or platform announcement sent by an authorized NEXUS administrator.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "recipientId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "recipientName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "senderId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "body": { "type": "string", "minLength": 2, "maxLength": 2000 },
+        "relatedDoubtId": { "type": "string", "maxLength": 128 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "recipientId", "recipientName", "senderId", "senderName", "subject", "body", "isRead", "createdAt"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Content moderation or reward classification report submitted by a community member.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "targetType": { "type": "string", "enum": ["question", "answer", "reward"] },
+        "targetId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "questionId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "targetPreview": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reason": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "reporterId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "status": { "type": "string", "enum": ["open", "dismissed", "actioned"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "targetType", "targetId", "questionId", "targetPreview", "reason", "reporterId", "status", "createdAt", "updatedAt"]
+    },
+    "AiInsightCache": {
+      "title": "AiInsightCache",
+      "description": "Structured NEXUS AI insight stored per question.",
+      "type": "object",
+      "properties": {
+        "questionId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "suggestedExplanation": { "type": "string", "minLength": 1, "maxLength": 3000 },
+        "importantClues": { "type": "array" },
+        "stepByStepApproach": { "type": "array" },
+        "possibleErrors": { "type": "array" },
+        "helpfulNextSteps": { "type": "array" },
+        "analyzedAttachments": { "type": "array" },
+        "skippedAttachments": { "type": "array" },
+        "model": { "type": "string", "maxLength": 80 },
+        "generatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["questionId", "suggestedExplanation", "importantClues", "stepByStepApproach", "possibleErrors", "helpfulNextSteps", "model", "generatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Public student profile records."
+    },
+    "/users/{userId}/private/info": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Private PII document isolated from public profile."
+    },
+    "/questions/{questionId}": {
+      "schema": { "$ref": "#/entities/Question" },
+      "description": "Public learning doubts and community questions."
+    },
+    "/questions/{questionId}/likes/{userId}": {
+      "schema": { "$ref": "#/entities/QuestionLike" },
+      "description": "Single active NEXUS Like ('I have this doubt too') per user identity per question."
+    },
+    "/questions/{questionId}/answers/{answerId}": {
+      "schema": { "$ref": "#/entities/Answer" },
+      "description": "Human community answers for a question."
+    },
+    "/questions/{questionId}/answers/{answerId}/likes/{userId}": {
+      "schema": { "$ref": "#/entities/AnswerLike" },
+      "description": "Single active like per user identity per answer."
+    },
+    "/questions/{questionId}/answers/{answerId}/replies/{replyId}": {
+      "schema": { "$ref": "#/entities/AnswerReply" },
+      "description": "Compact inline replies on a community answer."
+    },
+    "/questions/{questionId}/insights/{insightId}": {
+      "schema": { "$ref": "#/entities/AiInsightCache" },
+      "description": "Structured Gemini NEXUS AI insight per question."
+    },
+    "/creditTransactions/{txId}": {
+      "schema": { "$ref": "#/entities/CreditTransaction" },
+      "description": "Immutable idempotent credit reward transactions keyed by doubtId."
+    },
+    "/rewardAdjustments/{adjId}": {
+      "schema": { "$ref": "#/entities/RewardAdjustment" },
+      "description": "Auditable admin difficulty & credit reward adjustment logs."
+    },
+    "/adminMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/AdminMessage" },
+      "description": "Direct messages and announcements sent by verified admins."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Reported questions, answers, and reward issues for admin moderation."
+    }
+  }
+}

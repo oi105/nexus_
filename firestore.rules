@@ -1,0 +1,715 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Health check document for startup connectivity verification
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // Reusable Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerifiedGoogleUser() {
+      return isSignedIn()
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.auth.token.email_verified == true;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      return isVerifiedGoogleUser() && (
+        request.auth.token.email == 'gouravsurajwani685@gmail.com'
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    function isValidTierMapping(tier, credits) {
+      return (tier == 'QUICK_FIX' && credits == 5)
+        || (tier == 'STANDARD' && credits == 10)
+        || (tier == 'CHALLENGING' && credits == 20)
+        || (tier == 'ADVANCED' && credits == 30);
+    }
+
+    // Validation Blueprints
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+        'uid', 'displayName', 'reputation', 'contributions',
+        'creditsEarned', 'availableToHelp', 'isSuspended',
+        'isPublic', 'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'uid', 'displayName', 'photoURL', 'branch', 'year', 'bio', 'skills',
+        'reputation', 'sessionsCompleted', 'contributions', 'creditsEarned',
+        'totalCreditsEarned', 'totalDoubtsSolved', 'lastRewardDoubtId',
+        'availableToHelp', 'isSuspended', 'isPublic', 'createdAt', 'updatedAt'
+      ])
+      && data.uid is string && data.uid == userId && isValidId(data.uid)
+      && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+      && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+      && (!('branch' in data) || (data.branch is string && data.branch.size() <= 60))
+      && (!('year' in data) || (data.year is string && data.year.size() <= 30))
+      && (!('bio' in data) || (data.bio is string && data.bio.size() <= 300))
+      && (!('skills' in data) || (data.skills is list && data.skills.size() <= 12 && (data.skills.size() == 0 || (data.skills[0] is string && data.skills[0].size() <= 40))))
+      && data.reputation is number && data.reputation >= 0 && data.reputation <= 1000000
+      && (!('sessionsCompleted' in data) || (data.sessionsCompleted is number && data.sessionsCompleted >= 0 && data.sessionsCompleted <= 100000))
+      && data.contributions is number && data.contributions >= 0 && data.contributions <= 100000
+      && data.creditsEarned is number && data.creditsEarned >= 0 && data.creditsEarned <= 1000000
+      && (!('totalCreditsEarned' in data) || (data.totalCreditsEarned is number && data.totalCreditsEarned >= 0 && data.totalCreditsEarned <= 1000000))
+      && (!('totalDoubtsSolved' in data) || (data.totalDoubtsSolved is number && data.totalDoubtsSolved >= 0 && data.totalDoubtsSolved <= 100000))
+      && (!('lastRewardDoubtId' in data) || (data.lastRewardDoubtId is string && isValidId(data.lastRewardDoubtId)))
+      && data.availableToHelp is bool
+      && data.isSuspended is bool
+      && data.isPublic is bool
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'updatedAt'])
+      && data.keys().hasOnly(['uid', 'email', 'updatedAt'])
+      && data.uid is string && data.uid == userId && isValidId(data.uid)
+      && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidQuestion(data, questionId) {
+      return data.keys().hasAll([
+        'id', 'authorId', 'authorName', 'title', 'description', 'topic',
+        'tags', 'urgency', 'status', 'likeCount',
+        'answerCount', 'hasAiInsight', 'isPublic', 'moderationStatus',
+        'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'id', 'authorId', 'authorName', 'authorPhotoURL', 'authorBranch',
+        'title', 'description', 'topic', 'tags', 'urgency', 'status',
+        'bountyCredits', 'difficultyTier', 'difficultyReason', 'estimatedComplexity',
+        'assignedCredits', 'assessmentStatus', 'assessmentTimestamp',
+        'acceptedAnswerId', 'resolvedAt',
+        'attachments', 'externalLinks', 'attachmentPreviews',
+        'likeCount', 'answerCount', 'hasAiInsight', 'claimedById', 'claimedByName',
+        'voteScore', 'upvoteCount', 'downvoteCount', 'sameDoubtCount',
+        'isPublic', 'moderationStatus', 'createdAt', 'updatedAt'
+      ])
+      && data.id is string && data.id == questionId && isValidId(data.id)
+      && data.authorId is string && isValidId(data.authorId)
+      && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+      && (!('authorPhotoURL' in data) || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 500))
+      && (!('authorBranch' in data) || (data.authorBranch is string && data.authorBranch.size() <= 60))
+      && data.title is string && data.title.size() >= 5 && data.title.size() <= 180
+      && data.description is string && data.description.size() >= 10 && data.description.size() <= 5000
+      && data.topic is string && data.topic.size() >= 2 && data.topic.size() <= 40
+      && data.tags is list && data.tags.size() <= 8 && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 40))
+      && data.urgency in ['normal', 'urgent', 'critical']
+      && data.status in ['open', 'claimed', 'in_session', 'resolved']
+      && (!('bountyCredits' in data) || (data.bountyCredits is number && data.bountyCredits >= 0 && data.bountyCredits <= 500))
+      && (!('difficultyTier' in data) || data.difficultyTier in ['QUICK_FIX', 'STANDARD', 'CHALLENGING', 'ADVANCED'])
+      && (!('difficultyReason' in data) || (data.difficultyReason is string && data.difficultyReason.size() <= 500))
+      && (!('estimatedComplexity' in data) || (data.estimatedComplexity is string && data.estimatedComplexity.size() <= 120))
+      && (!('assignedCredits' in data) || (data.assignedCredits is number && data.assignedCredits in [0, 5, 10, 20, 30]))
+      && (!('assessmentStatus' in data) || data.assessmentStatus in ['pending', 'completed', 'failed'])
+      && (!('assessmentTimestamp' in data) || data.assessmentTimestamp is timestamp)
+      && (!('acceptedAnswerId' in data) || (data.acceptedAnswerId is string && isValidId(data.acceptedAnswerId)))
+      && (!('resolvedAt' in data) || data.resolvedAt is timestamp)
+      && (!('attachments' in data) || (data.attachments is list && data.attachments.size() <= 6))
+      && (!('externalLinks' in data) || (data.externalLinks is list && data.externalLinks.size() <= 5))
+      && (!('attachmentPreviews' in data) || (data.attachmentPreviews is list && data.attachmentPreviews.size() <= 5))
+      && data.likeCount is number && data.likeCount >= 0 && data.likeCount <= 100000
+      && data.answerCount is number && data.answerCount >= 0 && data.answerCount <= 10000
+      && data.hasAiInsight is bool
+      && (!('claimedById' in data) || (data.claimedById is string && data.claimedById.size() <= 128))
+      && (!('claimedByName' in data) || (data.claimedByName is string && data.claimedByName.size() <= 80))
+      && data.isPublic is bool
+      && data.moderationStatus in ['active', 'flagged', 'removed']
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidLikeRecord(data, userId) {
+      return data.keys().hasAll(['userId', 'createdAt'])
+      && data.keys().hasOnly(['userId', 'createdAt'])
+      && data.userId is string && data.userId == userId && isValidId(data.userId)
+      && data.createdAt is timestamp;
+    }
+
+    function isValidAnswer(data, questionId, answerId) {
+      return data.keys().hasAll([
+        'id', 'questionId', 'authorId', 'authorName', 'authorIsGuest',
+        'body', 'likeCount', 'replyCount', 'isAccepted', 'isPublic',
+        'moderationStatus', 'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'id', 'questionId', 'authorId', 'authorName', 'authorPhotoURL',
+        'authorIsGuest', 'authorBranch', 'body', 'attachments',
+        'likeCount', 'helpfulCount', 'replyCount', 'isAccepted',
+        'isPublic', 'moderationStatus', 'createdAt', 'updatedAt'
+      ])
+      && data.id is string && data.id == answerId && isValidId(data.id)
+      && data.questionId is string && data.questionId == questionId && isValidId(data.questionId)
+      && data.authorId is string && isValidId(data.authorId)
+      && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+      && (!('authorPhotoURL' in data) || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 500))
+      && data.authorIsGuest is bool
+      && (!('authorBranch' in data) || (data.authorBranch is string && data.authorBranch.size() <= 60))
+      && data.body is string && data.body.size() >= 1 && data.body.size() <= 5000
+      && (!('attachments' in data) || (data.attachments is list && data.attachments.size() <= 6))
+      && data.likeCount is number && data.likeCount >= 0 && data.likeCount <= 100000
+      && data.replyCount is number && data.replyCount >= 0 && data.replyCount <= 10000
+      && data.isAccepted is bool
+      && data.isPublic is bool
+      && data.moderationStatus in ['active', 'flagged', 'removed']
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidAnswerReply(data, questionId, answerId, replyId) {
+      return data.keys().hasAll([
+        'id', 'questionId', 'answerId', 'authorId', 'authorName',
+        'authorIsGuest', 'body', 'isPublic', 'createdAt'
+      ])
+      && data.keys().hasOnly([
+        'id', 'questionId', 'answerId', 'authorId', 'authorName',
+        'authorPhotoURL', 'authorIsGuest', 'body', 'isPublic', 'createdAt'
+      ])
+      && data.id is string && data.id == replyId && isValidId(data.id)
+      && data.questionId is string && data.questionId == questionId && isValidId(data.questionId)
+      && data.answerId is string && data.answerId == answerId && isValidId(data.answerId)
+      && data.authorId is string && isValidId(data.authorId)
+      && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+      && (!('authorPhotoURL' in data) || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 500))
+      && data.authorIsGuest is bool
+      && data.body is string && data.body.size() >= 2 && data.body.size() <= 1500
+      && data.isPublic is bool
+      && data.createdAt is timestamp;
+    }
+
+    function isValidAiInsight(data, questionId) {
+      return data.keys().hasAll([
+        'questionId', 'suggestedExplanation', 'importantClues',
+        'stepByStepApproach', 'possibleErrors', 'helpfulNextSteps',
+        'model', 'generatedAt'
+      ])
+      && data.keys().hasOnly([
+        'questionId', 'suggestedExplanation', 'importantClues',
+        'stepByStepApproach', 'possibleErrors', 'helpfulNextSteps',
+        'analyzedAttachments', 'skippedAttachments',
+        'model', 'generatedAt'
+      ])
+      && data.questionId is string && data.questionId == questionId && isValidId(data.questionId)
+      && data.suggestedExplanation is string && data.suggestedExplanation.size() >= 1 && data.suggestedExplanation.size() <= 3000
+      && data.importantClues is list && data.importantClues.size() <= 8
+      && data.stepByStepApproach is list && data.stepByStepApproach.size() <= 10
+      && data.possibleErrors is list && data.possibleErrors.size() <= 8
+      && data.helpfulNextSteps is list && data.helpfulNextSteps.size() <= 8
+      && (!('analyzedAttachments' in data) || (data.analyzedAttachments is list && data.analyzedAttachments.size() <= 6))
+      && (!('skippedAttachments' in data) || (data.skippedAttachments is list && data.skippedAttachments.size() <= 6))
+      && data.model is string && data.model.size() >= 1 && data.model.size() <= 80
+      && data.generatedAt is timestamp;
+    }
+
+    function isValidCreditTransaction(data, txId) {
+      return data.keys().hasAll([
+        'id', 'userId', 'userName', 'doubtId', 'doubtTitle',
+        'acceptedAnswerId', 'credits', 'difficultyTier',
+        'transactionType', 'createdAt'
+      ])
+      && data.keys().hasOnly([
+        'id', 'userId', 'userName', 'userPhotoURL', 'doubtId', 'doubtTitle',
+        'acceptedAnswerId', 'credits', 'difficultyTier',
+        'transactionType', 'createdAt'
+      ])
+      && data.id is string && data.id == txId && data.id == data.doubtId && isValidId(data.id)
+      && data.userId is string && isValidId(data.userId)
+      && data.userName is string && data.userName.size() >= 1 && data.userName.size() <= 80
+      && (!('userPhotoURL' in data) || (data.userPhotoURL is string && data.userPhotoURL.size() <= 500))
+      && data.doubtId is string && isValidId(data.doubtId)
+      && data.doubtTitle is string && data.doubtTitle.size() >= 3 && data.doubtTitle.size() <= 180
+      && data.acceptedAnswerId is string && isValidId(data.acceptedAnswerId)
+      && data.credits is number && data.credits in [5, 10, 20, 30]
+      && data.difficultyTier in ['QUICK_FIX', 'STANDARD', 'CHALLENGING', 'ADVANCED']
+      && isValidTierMapping(data.difficultyTier, data.credits)
+      && data.transactionType == 'DOUBT_SOLVED'
+      && data.createdAt is timestamp;
+    }
+
+    function isValidRewardAdjustment(data, adjId) {
+      return data.keys().hasAll([
+        'id', 'doubtId', 'previousTier', 'newTier',
+        'previousCredits', 'newCredits', 'adminUserId', 'reason', 'createdAt'
+      ])
+      && data.keys().hasOnly([
+        'id', 'doubtId', 'doubtTitle', 'previousTier', 'newTier',
+        'previousCredits', 'newCredits', 'adminUserId', 'adminName',
+        'reason', 'createdAt'
+      ])
+      && data.id is string && data.id == adjId && isValidId(data.id)
+      && data.doubtId is string && isValidId(data.doubtId)
+      && (!('doubtTitle' in data) || (data.doubtTitle is string && data.doubtTitle.size() <= 180))
+      && data.previousTier is string && data.previousTier.size() >= 1 && data.previousTier.size() <= 30
+      && data.newTier in ['QUICK_FIX', 'STANDARD', 'CHALLENGING', 'ADVANCED']
+      && data.previousCredits is number && data.previousCredits >= 0 && data.previousCredits <= 500
+      && data.newCredits is number && isValidTierMapping(data.newTier, data.newCredits)
+      && data.adminUserId is string && isValidId(data.adminUserId)
+      && (!('adminName' in data) || (data.adminName is string && data.adminName.size() <= 80))
+      && data.reason is string && data.reason.size() >= 5 && data.reason.size() <= 500
+      && data.createdAt is timestamp;
+    }
+
+    function isValidAdminMessage(data, messageId) {
+      return data.keys().hasAll([
+        'id', 'recipientId', 'recipientName', 'senderId', 'senderName',
+        'subject', 'body', 'isRead', 'createdAt'
+      ])
+      && data.keys().hasOnly([
+        'id', 'recipientId', 'recipientName', 'senderId', 'senderName',
+        'subject', 'body', 'relatedDoubtId', 'isRead', 'createdAt'
+      ])
+      && data.id is string && data.id == messageId && isValidId(data.id)
+      && data.recipientId is string && data.recipientId.size() >= 1 && data.recipientId.size() <= 128
+      && data.recipientName is string && data.recipientName.size() >= 1 && data.recipientName.size() <= 80
+      && data.senderId is string && isValidId(data.senderId)
+      && data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 80
+      && data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 140
+      && data.body is string && data.body.size() >= 2 && data.body.size() <= 2000
+      && (!('relatedDoubtId' in data) || (data.relatedDoubtId is string && data.relatedDoubtId.size() <= 128))
+      && data.isRead is bool
+      && data.createdAt is timestamp;
+    }
+
+    function isValidReport(data, reportId) {
+      return data.keys().hasAll([
+        'id', 'targetType', 'targetId', 'questionId', 'targetPreview',
+        'reason', 'reporterId', 'status', 'createdAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'id', 'targetType', 'targetId', 'questionId', 'targetPreview',
+        'reason', 'reporterId', 'status', 'createdAt', 'updatedAt'
+      ])
+      && data.id is string && data.id == reportId && isValidId(data.id)
+      && data.targetType in ['question', 'answer', 'reward']
+      && data.targetId is string && isValidId(data.targetId)
+      && data.questionId is string && isValidId(data.questionId)
+      && data.targetPreview is string && data.targetPreview.size() >= 1 && data.targetPreview.size() <= 200
+      && data.reason is string && data.reason.size() >= 5 && data.reason.size() <= 500
+      && data.reporterId is string && isValidId(data.reporterId)
+      && data.status in ['open', 'dismissed', 'actioned']
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    // Admin registry
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // Public Student Profiles (Zero PII)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (existing().isPublic == true || isOwner(userId) || isAdmin());
+      allow list: if resource.data.isPublic == true || isAdmin();
+      allow create: if isValidId(userId)
+        && isVerifiedGoogleUser()
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().isSuspended == false
+        && incoming().reputation == 0
+        && incoming().contributions == 0
+        && incoming().creditsEarned == 0
+        && (!('totalCreditsEarned' in incoming()) || incoming().totalCreditsEarned == 0)
+        && (!('totalDoubtsSolved' in incoming()) || incoming().totalDoubtsSolved == 0)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            isVerifiedGoogleUser()
+            && isOwner(userId)
+            && existing().isSuspended == false
+            && incoming().isSuspended == existing().isSuspended
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'displayName', 'photoURL', 'branch', 'year', 'bio', 'skills',
+              'availableToHelp', 'isPublic', 'updatedAt'
+            ])
+          )
+          || (
+            isVerifiedGoogleUser()
+            && isOwner(userId)
+            && existing().isSuspended == false
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'contributions', 'updatedAt'
+            ])
+            && incoming().contributions == existing().contributions + 1
+          )
+          || (
+            isVerifiedGoogleUser()
+            && 'lastRewardDoubtId' in incoming()
+            && isValidId(incoming().lastRewardDoubtId)
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'reputation', 'creditsEarned', 'totalCreditsEarned',
+              'totalDoubtsSolved', 'lastRewardDoubtId', 'updatedAt'
+            ])
+            && !exists(/databases/$(database)/documents/creditTransactions/$(incoming().lastRewardDoubtId))
+            && existsAfter(/databases/$(database)/documents/creditTransactions/$(incoming().lastRewardDoubtId))
+            && getAfter(/databases/$(database)/documents/creditTransactions/$(incoming().lastRewardDoubtId)).data.userId == userId
+            && incoming().creditsEarned == existing().creditsEarned + getAfter(/databases/$(database)/documents/creditTransactions/$(incoming().lastRewardDoubtId)).data.credits
+            && incoming().reputation == existing().reputation + getAfter(/databases/$(database)/documents/creditTransactions/$(incoming().lastRewardDoubtId)).data.credits
+            && (
+              ('totalCreditsEarned' in existing() && incoming().totalCreditsEarned == existing().totalCreditsEarned + getAfter(/databases/$(database)/documents/creditTransactions/$(incoming().lastRewardDoubtId)).data.credits)
+              || (!('totalCreditsEarned' in existing()) && incoming().totalCreditsEarned == getAfter(/databases/$(database)/documents/creditTransactions/$(incoming().lastRewardDoubtId)).data.credits)
+            )
+            && (
+              ('totalDoubtsSolved' in existing() && incoming().totalDoubtsSolved == existing().totalDoubtsSolved + 1)
+              || (!('totalDoubtsSolved' in existing()) && incoming().totalDoubtsSolved == 1)
+            )
+          )
+        );
+      allow delete: if isAdmin();
+
+      // Isolated Private PII
+      match /private/info {
+        allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow create: if isValidId(userId)
+          && isVerifiedGoogleUser()
+          && isOwner(userId)
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(userId)
+          && isVerifiedGoogleUser()
+          && isOwner(userId)
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().updatedAt == request.time;
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Questions & Subcollections
+    match /questions/{questionId} {
+      allow get: if isValidId(questionId) && (existing().isPublic == true || isOwner(existing().authorId) || isAdmin());
+      allow list: if resource.data.isPublic == true || isAdmin();
+      allow create: if isValidId(questionId)
+        && isVerifiedGoogleUser()
+        && isValidQuestion(incoming(), questionId)
+        && incoming().authorId == request.auth.uid
+        && incoming().likeCount == 0
+        && incoming().answerCount == 0
+        && incoming().status == 'open'
+        && incoming().moderationStatus == 'active'
+        && incoming().isPublic == true
+        && (!('assignedCredits' in incoming()) || incoming().assignedCredits == 0)
+        && (!('bountyCredits' in incoming()) || incoming().bountyCredits == 0)
+        && (!('difficultyTier' in incoming()))
+        && (!('acceptedAnswerId' in incoming()))
+        && (!('assessmentStatus' in incoming()) || incoming().assessmentStatus == 'pending')
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(questionId)
+        && isValidQuestion(incoming(), questionId)
+        && incoming().id == existing().id
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            isVerifiedGoogleUser()
+            && isOwner(existing().authorId)
+            && existing().moderationStatus != 'removed'
+            && existing().status != 'resolved'
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'description', 'topic', 'tags', 'urgency',
+              'attachments', 'updatedAt'
+            ])
+          )
+          || (
+            isVerifiedGoogleUser()
+            && isOwner(existing().authorId)
+            && existing().moderationStatus != 'removed'
+            && existing().status != 'resolved'
+            && incoming().status == 'resolved'
+            && 'acceptedAnswerId' in incoming()
+            && incoming().resolvedAt == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'acceptedAnswerId', 'resolvedAt', 'updatedAt'
+            ])
+          )
+          || (
+            isSignedIn()
+            && (!('assessmentStatus' in existing()) || existing().assessmentStatus != 'completed')
+            && incoming().assessmentStatus == 'completed'
+            && 'difficultyTier' in incoming()
+            && 'assignedCredits' in incoming()
+            && isValidTierMapping(incoming().difficultyTier, incoming().assignedCredits)
+            && incoming().assessmentTimestamp == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'difficultyTier', 'difficultyReason', 'estimatedComplexity',
+              'assignedCredits', 'bountyCredits', 'assessmentStatus',
+              'assessmentTimestamp', 'tags', 'updatedAt'
+            ])
+            && (!('bountyCredits' in incoming()) || incoming().bountyCredits == incoming().assignedCredits)
+          )
+          || (
+            isSignedIn()
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'likeCount', 'updatedAt'
+            ])
+            && (
+              ('likeCount' in existing()
+                && incoming().likeCount >= existing().likeCount - 1
+                && incoming().likeCount <= existing().likeCount + 1)
+              || (!('likeCount' in existing())
+                && incoming().likeCount >= 0
+                && incoming().likeCount <= 100000)
+            )
+          )
+          || (
+            isSignedIn()
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'answerCount', 'updatedAt'
+            ])
+            && incoming().answerCount == existing().answerCount + 1
+          )
+          || (
+            isSignedIn()
+            && incoming().hasAiInsight == true
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'hasAiInsight', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(questionId) && (isAdmin() || (isVerifiedGoogleUser() && isOwner(existing().authorId)));
+
+      // NEXUS Like: 1 per user identity per doubt ("I have this doubt too")
+      match /likes/{userId} {
+        allow get: if isValidId(questionId) && isValidId(userId) && isOwner(userId);
+        allow create: if isValidId(questionId) && isValidId(userId)
+          && isSignedIn() && isOwner(userId)
+          && exists(/databases/$(database)/documents/questions/$(questionId))
+          && isValidLikeRecord(incoming(), userId)
+          && incoming().createdAt == request.time;
+        allow delete: if isValidId(questionId) && isValidId(userId) && isSignedIn() && isOwner(userId);
+      }
+
+      match /answers/{answerId} {
+        allow get: if isValidId(questionId) && isValidId(answerId) && (existing().isPublic == true || isAdmin());
+        allow list: if resource.data.isPublic == true || isAdmin();
+        allow create: if isValidId(questionId) && isValidId(answerId)
+          && isSignedIn()
+          && exists(/databases/$(database)/documents/questions/$(questionId))
+          && isValidAnswer(incoming(), questionId, answerId)
+          && incoming().authorId == request.auth.uid
+          && incoming().likeCount == 0
+          && incoming().replyCount == 0
+          && incoming().isAccepted == false
+          && incoming().isPublic == true
+          && incoming().moderationStatus == 'active'
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(questionId) && isValidId(answerId)
+          && isValidAnswer(incoming(), questionId, answerId)
+          && incoming().id == existing().id
+          && incoming().questionId == existing().questionId
+          && incoming().authorId == existing().authorId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin()
+            || (
+              isSignedIn()
+              && incoming().diff(existing()).affectedKeys().hasOnly(['likeCount', 'updatedAt'])
+              && (
+                ('likeCount' in existing()
+                  && incoming().likeCount >= existing().likeCount - 1
+                  && incoming().likeCount <= existing().likeCount + 1)
+                || (!('likeCount' in existing())
+                  && incoming().likeCount >= 0
+                  && incoming().likeCount <= 100000)
+              )
+            )
+            || (
+              isSignedIn()
+              && incoming().diff(existing()).affectedKeys().hasOnly(['replyCount', 'updatedAt'])
+              && (
+                ('replyCount' in existing()
+                  && incoming().replyCount == existing().replyCount + 1)
+                || (!('replyCount' in existing())
+                  && incoming().replyCount == 1)
+              )
+            )
+            || (
+              isVerifiedGoogleUser()
+              && existing().isAccepted == false
+              && incoming().isAccepted == true
+              && get(/databases/$(database)/documents/questions/$(questionId)).data.authorId == request.auth.uid
+              && get(/databases/$(database)/documents/questions/$(questionId)).data.status != 'resolved'
+              && incoming().diff(existing()).affectedKeys().hasOnly(['isAccepted', 'updatedAt'])
+            )
+          );
+        allow delete: if isValidId(questionId) && isValidId(answerId) && (isAdmin() || (isSignedIn() && isOwner(existing().authorId)));
+
+        match /likes/{userId} {
+          allow get: if isValidId(questionId) && isValidId(answerId) && isValidId(userId) && isOwner(userId);
+          allow create: if isValidId(questionId) && isValidId(answerId) && isValidId(userId)
+            && isSignedIn() && isOwner(userId)
+            && exists(/databases/$(database)/documents/questions/$(questionId)/answers/$(answerId))
+            && isValidLikeRecord(incoming(), userId)
+            && incoming().createdAt == request.time;
+          allow delete: if isValidId(questionId) && isValidId(answerId) && isValidId(userId) && isSignedIn() && isOwner(userId);
+        }
+
+        match /replies/{replyId} {
+          allow get: if isValidId(questionId) && isValidId(answerId) && isValidId(replyId)
+            && (existing().isPublic == true || isAdmin());
+          allow list: if resource.data.isPublic == true || isAdmin();
+          allow create: if isValidId(questionId) && isValidId(answerId) && isValidId(replyId)
+            && isSignedIn()
+            && exists(/databases/$(database)/documents/questions/$(questionId)/answers/$(answerId))
+            && isValidAnswerReply(incoming(), questionId, answerId, replyId)
+            && incoming().authorId == request.auth.uid
+            && incoming().isPublic == true
+            && incoming().createdAt == request.time;
+          allow delete: if isValidId(questionId) && isValidId(answerId) && isValidId(replyId)
+            && (isAdmin() || (isSignedIn() && isOwner(existing().authorId)));
+        }
+      }
+
+      match /insights/{insightId} {
+        allow get, list: if isValidId(questionId);
+        allow create, update: if isValidId(questionId) && isValidId(insightId)
+          && isSignedIn()
+          && exists(/databases/$(database)/documents/questions/$(questionId))
+          && isValidAiInsight(incoming(), questionId)
+          && incoming().generatedAt == request.time;
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Verified Credit Award Transactions (Idempotent: keyed by doubtId)
+    match /creditTransactions/{txId} {
+      allow get: if isValidId(txId);
+      allow list: if resource.data.transactionType == 'DOUBT_SOLVED';
+      allow create: if isValidId(txId)
+        && isVerifiedGoogleUser()
+        && isValidCreditTransaction(incoming(), txId)
+        && !exists(/databases/$(database)/documents/creditTransactions/$(txId))
+        && exists(/databases/$(database)/documents/questions/$(incoming().doubtId))
+        && exists(/databases/$(database)/documents/questions/$(incoming().doubtId)/answers/$(incoming().acceptedAnswerId))
+        && get(/databases/$(database)/documents/questions/$(incoming().doubtId)).data.authorId == request.auth.uid
+        && get(/databases/$(database)/documents/questions/$(incoming().doubtId)).data.status != 'resolved'
+        && get(/databases/$(database)/documents/questions/$(incoming().doubtId)).data.assessmentStatus == 'completed'
+        && get(/databases/$(database)/documents/questions/$(incoming().doubtId)).data.assignedCredits == incoming().credits
+        && get(/databases/$(database)/documents/questions/$(incoming().doubtId)).data.difficultyTier == incoming().difficultyTier
+        && get(/databases/$(database)/documents/questions/$(incoming().doubtId)/answers/$(incoming().acceptedAnswerId)).data.authorId == incoming().userId
+        && incoming().userId != request.auth.uid
+        && getAfter(/databases/$(database)/documents/questions/$(incoming().doubtId)).data.status == 'resolved'
+        && getAfter(/databases/$(database)/documents/questions/$(incoming().doubtId)).data.acceptedAnswerId == incoming().acceptedAnswerId
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Auditable Admin Reward Adjustments
+    match /rewardAdjustments/{adjId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(adjId)
+        && isAdmin()
+        && isValidRewardAdjustment(incoming(), adjId)
+        && incoming().adminUserId == request.auth.uid
+        && exists(/databases/$(database)/documents/questions/$(incoming().doubtId))
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Admin Direct Messages & Announcements
+    match /adminMessages/{messageId} {
+      allow get: if isValidId(messageId) && (
+        isAdmin()
+        || (isSignedIn() && (existing().recipientId == request.auth.uid || existing().recipientId == 'ALL'))
+      );
+      allow list: if isAdmin()
+        || (isSignedIn() && (resource.data.recipientId == request.auth.uid || resource.data.recipientId == 'ALL'));
+      allow create: if isValidId(messageId)
+        && isAdmin()
+        && isValidAdminMessage(incoming(), messageId)
+        && incoming().senderId == request.auth.uid
+        && incoming().isRead == false
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(messageId)
+        && isValidAdminMessage(incoming(), messageId)
+        && incoming().id == existing().id
+        && incoming().senderId == existing().senderId
+        && incoming().recipientId == existing().recipientId
+        && incoming().createdAt == existing().createdAt
+        && (
+          isAdmin()
+          || (
+            isSignedIn()
+            && existing().recipientId == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])
+            && incoming().isRead == true
+          )
+        );
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+
+    // Legacy 15-Minute Sessions (historical read-only; no new session creation allowed)
+    match /sessions/{sessionId} {
+      allow get: if isValidId(sessionId) && isSignedIn() && (
+        existing().requesterId == request.auth.uid
+        || existing().helperId == request.auth.uid
+        || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.requesterId == request.auth.uid
+        || resource.data.helperId == request.auth.uid
+        || isAdmin()
+      );
+      allow create, update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Moderation & Reward Classification Reports
+    match /reports/{reportId} {
+      allow get: if isValidId(reportId) && isSignedIn() && (
+        existing().reporterId == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.reporterId == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(reportId)
+        && isSignedIn()
+        && isValidReport(incoming(), reportId)
+        && incoming().reporterId == request.auth.uid
+        && incoming().status == 'open'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(reportId)
+        && isAdmin()
+        && isValidReport(incoming(), reportId)
+        && incoming().id == existing().id
+        && incoming().reporterId == existing().reporterId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "NEXUS",
+  "description": "NEXUS — Community-powered peer-learning social network where students capture doubts, share rich knowledge, earn AI-assessed solver credits, and climb the Top Solvers leaderboard.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
